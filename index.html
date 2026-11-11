@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Science Run Cookie World</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#27143e;color:white;font-family:Arial;overflow:hidden;touch-action:manipulation}
+canvas{display:block;width:100vw;height:100vh}
+#hud{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;font-weight:bold;text-shadow:1px 2px 4px #321}
+.pill{background:#522b70dd;padding:10px 14px;border-radius:20px}
+#info{position:absolute;top:65px;left:50%;transform:translateX(-50%);background:#fff2ccee;color:#542b32;padding:10px 16px;border-radius:14px;text-align:center;width:90%;max-width:420px;font-weight:bold}
+#jump{position:absolute;bottom:25px;right:25px;width:85px;height:85px;border:0;border-radius:50%;background:#ffb52e;color:#542b32;font-size:18px;font-weight:bold;box-shadow:0 5px #bb6920}
+#start{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#7b3db5;border:0;color:white;border-radius:18px;padding:17px 28px;font-size:20px;font-weight:bold}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+ <span class="pill">🍪 COOKIE WORLD</span>
+ <span class="pill">🪙 <span id="coins">0</span></span>
+ <span class="pill">⭐ <span id="score">0</span></span>
+</div>
+<div id="info">🔥 ภารกิจ: ผจญภัยในอาณาจักรพลังงานความร้อน</div>
+<button id="jump">กระโดด ↑</button>
+<button id="start">เริ่มผจญภัย!</button>
+<script>
+const c=document.getElementById('game');
+const ctx=c.getContext('2d');
+let W,H,ground,playing=false,frame=0,score=0,coins=0,speed=5;
+let player={x:90,y:0,vy:0,jump:false};
+let obstacles=[],gems=[],quizTimer=0;
+function resize(){
+ W=c.width=innerWidth*devicePixelRatio;
+ H=c.height=innerHeight*devicePixelRatio;
+ ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+ W=innerWidth;H=innerHeight;ground=H-100;
+ player.y=ground-55;
+}
+addEventListener('resize',resize);resize();
+function rounded(x,y,w,h,r,color){
+ ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();
+}
+function drawWorld(){
+ let g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,'#8d55c5');g.addColorStop(1,'#ffad79');
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ for(let i=0;i<8;i++){
+  let x=(i*170-frame*.4)%(W+180);
+  ctx.fillStyle='#e9a0c7';ctx.beginPath();
+  ctx.arc(x,ground-125,35,0,Math.PI*2);ctx.fill();
+ }
+ ctx.fillStyle='#783b65';ctx.fillRect(0,ground,W,H-ground);
+ ctx.fillStyle='#ffcb75';ctx.fillRect(0,ground,W,9);
+ for(let i=0;i<15;i++){
+  let x=(i*85-frame*speed)%(W+90);
+  ctx.fillStyle='#ffdf9b';ctx.fillRect(x,ground+30,35,7);
+ }
+}
+function drawCookie(){
+ let y=player.y;
+ // เงา
+ ctx.fillStyle='#4c274b88';ctx.beginPath();
+ ctx.ellipse(player.x+25,ground-3,30,7,0,0,Math.PI*2);ctx.fill();
+ // ขา
+ rounded(player.x+8,y+43,12,16,5,'#713d27');
+ rounded(player.x+32,y+43,12,16,5,'#713d27');
+ // ตัวคุกกี้
+ rounded(player.x,y,52,52,17,'#bd7139');
+ // ช็อกโกแลต
+ ctx.fillStyle='#61351f';
+ [[10,10],[37,12],[14,36],[39,34]].forEach(p=>{
+  ctx.beginPath();ctx.arc(player.x+p[0],y+p[1],4,0,7);ctx.fill();
+ });
+ // หน้า
+ ctx.fillStyle='#35202a';
+ ctx.beginPath();ctx.arc(player.x+17,y+22,3,0,7);ctx.arc(player.x+36,y+22,3,0,7);ctx.fill();
+ ctx.strokeStyle='#35202a';ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(player.x+26,y+27,7,.2,2.8);ctx.stroke();
+ // หมวกนักวิทยาศาสตร์
+ rounded(player.x+9,y-12,34,13,5,'#fff');
+ ctx.fillStyle='#48d7ed';ctx.fillRect(player.x+23,y-10,8,8);
+}
+function spawn(){
+ obstacles.push({x:W+30,y:ground-35});
+ gems.push({x:W+100,y:ground-85-Math.random()*60});
+}
+function draw(){
+ drawWorld();
+ obstacles.forEach(o=>{
+  rounded(o.x,o.y,35,35,8,'#df563e');
+  ctx.fillStyle='white';ctx.font='20px Arial';ctx.fillText('🔥',o.x+5,o.y+26);
+ });
+ gems.forEach(o=>{
+  ctx.fillStyle='#ffdc35';ctx.beginPath();
+  ctx.arc(o.x,o.y,11,0,7);ctx.fill();
+  ctx.fillStyle='#fff5b0';ctx.beginPath();ctx.arc(o.x-3,o.y-3,3,0,7);ctx.fill();
+ });
+ drawCookie();
+}
+function jump(){
+ if(!playing)return;
+ if(player.y>=ground-55){player.vy=-14;player.jump=true;}
+}
+function start(){
+ playing=true;frame=0;score=0;coins=0;speed=5;
+ obstacles=[];gems=[];player.y=ground-55;player.vy=0;
+ document.getElementById('start').style.display='none';
+ document.getElementById('info').textContent='🔥 เก็บเหรียญและหลบเปลวไฟ!';
+}
+function end(){
+ playing=false;
+ document.getElementById('start').textContent='เล่นอีกครั้ง';
+ document.getElementById('start').style.display='block';
+ document.getElementById('info').textContent='จบเกม! คะแนน '+score+' | เหรียญ '+coins;
+}
+function loop(){
+ requestAnimationFrame(loop);
+ if(!playing){draw();return;}
+ frame++;score++;
+ if(frame%85===0)spawn();
+ player.vy+=.65;player.y+=player.vy;
+ if(player.y>ground-55){player.y=ground-55;player.vy=0;player.jump=false;}
+ obstacles.forEach(o=>o.x-=speed);
+ gems.forEach(o=>o.x-=speed);
+ obstacles=obstacles.filter(o=>o.x>-50);
+ gems=gems.filter(o=>o.x>-30);
+ obstacles.forEach(o=>{
+  if(player.x+45>o.x&&player.x+7<o.x+35&&player.y+48>o.y)end();
+ });
+ gems=gems.filter(o=>{
+  if(Math.abs(o.x-(player.x+25))<27&&Math.abs(o.y-(player.y+25))<35){
+   coins++;document.getElementById('coins').textContent=coins;return false;
+  }return true;
+ });
+ document.getElementById('score').textContent=score;
+ draw();
+}
+document.getElementById('jump').onclick=jump;
+document.getElementById('start').onclick=start;
+c.addEventListener('pointerdown',jump);
+addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp')jump();});
+loop();
+</script>
+</body>
+</html>
